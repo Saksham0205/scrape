@@ -1,0 +1,6 @@
+flask
+flask-cors
+requests
+beautifulsoup4
+redis
+selenium>=4.15.2
