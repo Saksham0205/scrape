@@ -8,7 +8,6 @@ app = Flask(__name__)
 CORS(app)
 
 def get_redis_connection():
-    """Get Redis connection with error handling"""
     try:
         r = redis.Redis(host='localhost', port=6379, db=0, socket_connect_timeout=5)
         r.ping()  # Test connection
@@ -20,7 +19,6 @@ def get_redis_connection():
 def get_scraped_content():
     """
     API to retrieve scraped content from Redis.
-    Returns the head and header HTML elements that were scraped.
     """
     try:
         r = get_redis_connection()
@@ -55,7 +53,6 @@ def get_scraped_content():
 def get_products():
     """
     This endpoint returns a list of real scraped products from Croma.
-    Returns an error if no real data is available - no demo data fallback.
     """
     try:
         r = get_redis_connection()
@@ -113,11 +110,8 @@ def trigger_scrape():
     try:
         from scraper import scrape_page_elements, store_in_redis
         
-        # Get URL from request body or use default Croma URL
         request_data = request.get_json() if request.is_json else {}
         url = request_data.get('url', 'https://www.croma.com/televisions-accessories/c/997')
-        
-        print(f"Real scraping triggered for: {url}")
         page_elements = scrape_page_elements(url)
         
         if page_elements["status"] == "success":
@@ -133,7 +127,6 @@ def trigger_scrape():
                 }
             })
         elif page_elements["status"] == "blocked":
-            # Website blocked us - return error, no sample data
             return jsonify({
                 "success": False,
                 "message": "Website blocked the scraping request (403 Forbidden)",
@@ -182,12 +175,5 @@ def health_check():
     })
 
 if __name__ == "__main__":
-    print("🚀 Starting Croma Scraper API Server")
-    print("📍 Server will run on: http://127.0.0.1:5001")
-    print("🔍 Available endpoints:")
-    print("   - GET  /products           : Get real scraped product data")
-    print("   - GET  /scraped-content    : Get scraped HTML elements")
-    print("   - POST /scrape             : Trigger real scraping from Croma")
-    print("   - GET  /health             : Health check")
-    print("⚠️  Note: Redis must be running for data storage!")
+    print("Server will run on: http://127.0.0.1:5001")
     app.run(debug=True, port=5001)

@@ -1,9 +1,7 @@
-import requests
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
 import redis
 import json
-import re
 import time
 import random
 from urllib.parse import urljoin
@@ -15,14 +13,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 def create_selenium_driver():
-    """Create and configure Chrome WebDriver with Selenium"""
     chrome_options = Options()
-    chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_argument('--headless')  
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--window-size=1920,1080')
-    # Add random user agent
     user_agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -31,21 +27,17 @@ def create_selenium_driver():
     chrome_options.add_argument(f'user-agent={random.choice(user_agents)}')
     
     driver = webdriver.Chrome(options=chrome_options)
-    driver.implicitly_wait(10)  # Set implicit wait
+    driver.implicitly_wait(10)  
     return driver
 
 def scrape_page_elements(url):
-    """Scrape product data using Selenium for better bot detection avoidance"""
     try:
-        print(f"🔍 Attempting to scrape: {url}")
         driver = create_selenium_driver()
         
         try:
-            # Add random delay to seem more human-like
+            
             time.sleep(random.uniform(2, 4))
             
-            # Load the page
-            print("🌐 Loading page with Selenium...")
             driver.get(url)
             
             # Wait for main content to load
@@ -53,8 +45,6 @@ def scrape_page_elements(url):
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
-            # Scroll down slowly to simulate human behavior and load lazy content
-            print("👆 Simulating human scrolling behavior...")
             total_height = driver.execute_script("return document.body.scrollHeight")
             for i in range(1, total_height, 100):
                 driver.execute_script(f"window.scrollTo(0, {i});")
@@ -63,8 +53,6 @@ def scrape_page_elements(url):
             # Get the page source after JavaScript execution
             page_source = driver.page_source
             soup = BeautifulSoup(page_source, 'html.parser')
-            
-            print("✅ Successfully loaded page content")
             
             # Initialize response structure
             response = {
@@ -89,10 +77,10 @@ def scrape_page_elements(url):
             # Try each selector until we find products
             products = []
             for selector in product_selectors:
-                print(f"🔍 Trying selector: {selector}")
+                print(f"Trying selector: {selector}")
                 product_elements = driver.find_elements(By.CSS_SELECTOR, selector)
                 if product_elements:
-                    print(f"✅ Found {len(product_elements)} products")
+                    print(f"Found {len(product_elements)} products")
                     
                     for i, product_elem in enumerate(product_elements):
                         try:
@@ -149,12 +137,11 @@ def scrape_page_elements(url):
                             # Add product if we have minimum required data
                             if product_data["title"] and (product_data["price"] or product_data["sale_price"]):
                                 products.append(product_data)
-                                print(f"✅ Scraped product {i+1}: {product_data['title'][:50]}...")
                             else:
-                                print(f"⚠️ Skipped product {i+1}: insufficient data")
+                                print(f"Skipped product {i+1}: insufficient data")
                             
                         except Exception as e:
-                            print(f"⚠️ Error processing product {i+1}: {str(e)}")
+                            print(f"Error processing product {i+1}: {str(e)}")
                             continue
                     
                     break  # Exit loop if we found products
@@ -169,7 +156,6 @@ def scrape_page_elements(url):
             return response
             
         except TimeoutException:
-            print("⚠️ Page load timeout")
             return {
                 "status": "error",
                 "error": "Page load timeout",
@@ -178,7 +164,6 @@ def scrape_page_elements(url):
             }
             
         except Exception as e:
-            print(f"❌ Error during scraping: {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),
@@ -190,7 +175,6 @@ def scrape_page_elements(url):
             driver.quit()
             
     except Exception as e:
-        print(f"❌ Fatal error: {str(e)}")
         return {
             "status": "error",
             "error": str(e),
@@ -199,17 +183,14 @@ def scrape_page_elements(url):
         }
 
 def store_in_redis(data):
-    """Store scraped data in Redis"""
     try:
         r = redis.Redis(host='localhost', port=6379, db=0)
         r.set("scraped_content", json.dumps(data))
         return True
     except Exception as e:
-        print(f"❌ Error storing data in Redis: {e}")
         return False
 
 if __name__ == "__main__":
     url = "https://www.croma.com/televisions-accessories/c/997"
-    print(f"🔍 Testing scraper with URL: {url}")
     result = scrape_page_elements(url)
-    print(f"✅ Found {len(result.get('products', []))} products")
+    print(f"Found {len(result.get('products', []))} products")
